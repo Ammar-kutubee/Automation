@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+
+const { execSync } = require('child_process');
+
+// Function to get the latest version tag and increment it
+function getNextVersion() {
+  let latestTag = '';
+  try {
+    latestTag = execSync('git describe --tags $(git rev-list --tags --max-count=1)').toString().trim();
+  } catch (error) {
+    console.log("No tags found, starting with v1.0.0");
+    return 'v1.0.0';
+  }
+
+  const match = latestTag.match(/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/);
+  if (match) {
+    const [, major, minor, patch] = match;
+    const nextVersion = `v${major}.${minor}.${parseInt(patch) + 1}`;
+    return nextVersion;
+  } else {
+    console.log("Invalid tag format, starting with v1.0.0");
+    return 'v1.0.0';
+  }
+}
+
+// Get arguments
+const args = process.argv.slice(2);
+if (args.length !== 1) {
+  console.error('Usage: node release.js <version-tag>');
+  process.exit(1);
+}
+
+const nextVersion = args[0];
+const releaseBranch = `release/${nextVersion}`;
+
+// Function to execute git commands
+function execGitCommand(command) {
+  try {
+    console.log(`Executing: ${command}`);
+    execSync(command, { stdio: 'inherit' });
+  } catch (error) {
+    console.error(`Error executing command: ${command}`);
+    process.exit(1);
+  }
+}
+
+// Checkout and pull branches
+execGitCommand('git checkout develop');
+execGitCommand('git pull origin develop');
+
+execGitCommand('git checkout main');
+execGitCommand('git pull origin main');
+
+// Create and checkout new release branch
+execGitCommand(`git checkout -b ${releaseBranch}`);
+
+// Merge develop into the release branch
+execGitCommand('git merge develop --no-ff -m "Merge develop into release branch"');
+
+// Tag the release
+execGitCommand(`git tag ${nextVersion}`);
+
+// Push the branch and tag
+execGitCommand(`git push origin ${releaseBranch}`);
+execGitCommand(`git push origin ${nextVersion}`);
+
+// Switch back to main and merge the release branch
+execGitCommand('git checkout main');
+execGitCommand(`git merge ${releaseBranch} --no-ff -m "Merge ${releaseBranch} into main"`);
+
+// Push the updated main branch
+execGitCommand('git push origin main');

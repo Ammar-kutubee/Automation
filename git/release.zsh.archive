@@ -1,0 +1,58 @@
+#!/bin/zsh
+
+# Source your .zshrc to load aliases and functions
+source ~/.zshrc
+
+# Check if a version tag argument was provided
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 <version-tag>"
+  exit 1
+fi
+
+# Get the version tag from the command line argument
+next_version=$1
+
+# Define your develop branch
+develop_branch="develop"
+
+# Function to get the default main branch
+git_main_branch() {
+  if git show-ref --verify --quiet refs/heads/main; then
+    echo "main"
+  elif git show-ref --verify --quiet refs/heads/master; then
+    echo "master"
+  else
+    echo "main"  # Fallback to main if neither exists
+  fi
+}
+main_branch=$(git_main_branch)
+
+# Checkout develop branch
+git checkout $develop_branch
+git pull origin $develop_branch
+
+# Go to main branch
+git checkout $main_branch
+git pull origin $main_branch
+
+# Checkout a new release branch
+git checkout -b release/$next_version
+
+# Merge develop into the release branch with --no-ff
+git merge $develop_branch --no-ff -m "Merge develop into release/$next_version"
+
+# Tag the release
+git tag $next_version
+
+# Push the new branch and the tag to origin
+git push origin release/$next_version
+git push origin $next_version
+
+# Go back to main branch
+git checkout $main_branch
+
+# Merge the release branch into main with --no-ff
+git merge release/$next_version --no-ff -m "Merge release/$next_version into $main_branch"
+
+# Push the updated main branch
+git push origin $main_branch
