@@ -3,7 +3,7 @@ const readline = require('readline');
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 function runCommand(command) {
@@ -17,10 +17,10 @@ function runCommand(command) {
 }
 
 function askQuestion(query) {
-  return new Promise(resolve => rl.question(query, resolve));
+  return new Promise((resolve) => rl.question(query, resolve));
 }
 
-(async function() {
+(async function () {
   try {
     // Ask for branch names and version number
     const developBranch = await askQuestion('Enter the develop branch name: ');
@@ -31,7 +31,7 @@ function askQuestion(query) {
     // Checkout develop branch
     runCommand(`git checkout ${developBranch}`);
 
-    // Pull the latest changes
+    // Pull the latest changes develop
     runCommand(`git pull origin ${developBranch}`);
 
     // Checkout new release branch
@@ -39,6 +39,9 @@ function askQuestion(query) {
 
     // Checkout main branch
     runCommand(`git checkout ${mainBranch}`);
+
+    // Pull the latest changes main
+    runCommand(`git pull origin ${mainBranch}`);
 
     // Merge release branch into main --no-ff
     runCommand(`git merge ${releaseBranch} --no-ff`);
@@ -51,7 +54,8 @@ function askQuestion(query) {
     runCommand(`git push origin ${version}`);
 
     console.log('Release process completed successfully.');
-
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
   } finally {
     rl.close();
   }
